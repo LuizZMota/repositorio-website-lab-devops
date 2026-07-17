@@ -27,6 +27,6 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2.3.0
 
       - name: Build Image
-        runs: docker build -t repositorio-website-lab-devops:v1.0 .
+        run: docker build -t repositorio-website-lab-devops:v1.0 .
           docker tag repositorio-website-lab-devops:v1.0 149729185352.dkr.ecr.us-east-2.amazonaws.com/site-prod:v1.0
           docker push 149729185352.dkr.ecr.us-east-2.amazonaws.com/site-prod:v1.0
