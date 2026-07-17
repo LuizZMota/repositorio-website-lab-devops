@@ -23,8 +23,8 @@ jobs:
           role-to-assume: arn:aws:iam::149729185352:role/GitHubActionsRepoApp 
           aws-region: us-east-2
       
-      - name: Login ECR
-        uses: elgohr/ecr-login-action@v3
+      - name: Amazon ECR "Login" Action for Github Actions
+        uses: aws-actions/amazon-ecr-login@v2.0.1
 
       - name: Build Image
         run: docker build -t repositorio-website-lab-devops:v1.0 .
