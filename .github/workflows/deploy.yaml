@@ -34,6 +34,7 @@ jobs:
   
   job2:
     name: Deploy EC2
+    needs: job1
     env:
       INSTANCE_KEY: ${{secrets.INSTANCE_KEY}}
       PUBLIC_IP: ${{secrets.PUBLIC_IP}}
