@@ -40,8 +40,47 @@ jobs:
       PUBLIC_IP: ${{secrets.PUBLIC_IP}}
     runs-on: ubuntu-latest
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.1.0
+        with:
+          role-to-assume: arn:aws:iam::149729185352:role/GitHubActionsRepoApp
+          aws-region: us-east-2
+
       - name: Deploy EC2 SSH
         run: |
+          set -e
+          
+          # Get the runner's public IP to whitelist it in the security group
+          RUNNER_IP=$(curl -sf https://ifconfig.me)
+          echo "Runner public IP: $RUNNER_IP"
+          
+          # Find the security group ID by name
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters Name=group-name,Values=website-sg \
+            --query 'SecurityGroups[0].GroupId' \
+            --output text)
+          echo "Security Group ID: $SG_ID"
+          
+          # Add the runner IP to the security group SSH rule (idempotent)
+          echo "Authorizing runner IP in security group..."
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$SG_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "${RUNNER_IP}/32" || echo "Rule may already exist, continuing..."
+          
+          # Cleanup: remove the runner IP from the security group when the step exits
+          cleanup() {
+            echo "Revoking runner IP from security group..."
+            aws ec2 revoke-security-group-ingress \
+              --group-id "$SG_ID" \
+              --protocol tcp \
+              --port 22 \
+              --cidr "${RUNNER_IP}/32" || true
+          }
+          trap cleanup EXIT
+          
+          # Deploy to EC2 via SSH
           echo "$INSTANCE_KEY" > chave-site-prod.pem
           chmod 400 chave-site-prod.pem
           
@@ -50,8 +89,8 @@ jobs:
           
           ssh -i chave-site-prod.pem -o StrictHostKeyChecking=no ubuntu@$PUBLIC_IP \
             "docker pull 149729185352.dkr.ecr.us-east-2.amazonaws.com/site-prod:v1.0"
-       
+        
           ssh -i chave-site-prod.pem -o StrictHostKeyChecking=no ubuntu@$PUBLIC_IP \
-            "docker run -d -p 80:80 --name site 149729185352.dkr.ecr.us-east-2.amazonaws.com/site-prod:v1.0"
-    
+            "docker rm -f site || true && docker run -d -p 80:80 --name site 149729185352.dkr.ecr.us-east-2.amazonaws.com/site-prod:v1.0"
+      
           rm -f chave-site-prod.pem
