@@ -45,6 +45,18 @@ jobs:
           echo "$INSTANCE_KEY" > chave-site-prod.pem
           chmod 400 chave-site-prod.pem
           
+          ssh -i chave-site-prod.pem -o StrictHostKeyChecking=no ubuntu@$PUBLIC_IP
+
+          sudo yum update -y
+
+          sudo yum install docker -y
+
+          sudo systemctl start docker
+
+          sudo systemctl enable docker
+
+          sudo usermod -a -G docker ec2-user
+
           ssh -i chave-site-prod.pem -o StrictHostKeyChecking=no ubuntu@$PUBLIC_IP \
             "aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 149729185352.dkr.ecr.us-east-2.amazonaws.com"
           
